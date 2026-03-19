@@ -120,7 +120,7 @@ This plugin is designed for CFD simulation workflows but works with any project 
 
 ## Contributing
 
-See `docs/` for design philosophy and architecture details.
+See `docs/` for design philosophy and architecture details. To publish this repo to GitHub, see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 
