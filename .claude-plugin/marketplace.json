@@ -1,0 +1,19 @@
+{
+  "name": "hcc-plugin",
+  "owner": {
+    "name": "Wei"
+  },
+  "metadata": {
+    "description": "HCC Memory — hierarchical project memory (trace, findings, wisdom) for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "hcc-memory",
+      "source": "./",
+      "description": "Hierarchical Cognitive Caching — project-level memory system for Claude Code. Tracks work, distills experience, builds verified knowledge across sessions.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "repository": "https://github.com/CHOSENX-GPU/HCC-Plugin"
+    }
+  ]
+}

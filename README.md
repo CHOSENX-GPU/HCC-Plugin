@@ -6,19 +6,46 @@ Hierarchical Cognitive Caching — project-level memory for Claude Code.
 
 HCC Memory is a Claude Code plugin that gives your AI assistant persistent, structured memory across sessions. Instead of losing context when a session ends, HCC captures execution traces, distills them into validated findings, and promotes the best ones to cross-project wisdom. It follows a three-layer model (trace → findings → wisdom) with progressive validation levels.
 
-## Install from GitHub
+## Install (Claude Code — recommended)
 
-1. Clone this repository (plugin root = repo root):
-   ```bash
-   git clone https://github.com/CHOSENX-GPU/HCC-Plugin.git
-   cd HCC-Plugin
+This repo ships a [plugin marketplace](https://code.claude.com/docs/en/discover-plugins) catalog at `.claude-plugin/marketplace.json`. Install like any third-party marketplace plugin:
+
+1. In **Claude Code**, add the marketplace (GitHub `owner/repo`):
+   ```text
+   /plugin marketplace add CHOSENX-GPU/HCC-Plugin
    ```
 
-2. Launch Claude Code with the local plugin:
-   ```bash
-   claude --plugin-dir "$(pwd)"
+2. Install the plugin (plugin id **`hcc-memory`** @ marketplace id **`hcc-plugin`**):
+   ```text
+   /plugin install hcc-memory@hcc-plugin
    ```
-   On Windows (PowerShell), use the full path to the cloned folder instead of `$(pwd)`.
+
+3. Apply changes:
+   ```text
+   /reload-plugins
+   ```
+
+Optional: choose install scope (user / project / local) from **`/plugin`** → **Discover** → select **hcc-memory**, instead of typing the install command.
+
+From a terminal (same naming as in-app):
+
+```bash
+claude plugin install hcc-memory@hcc-plugin --scope user
+```
+
+See [Discover and install plugins](https://code.claude.com/docs/en/discover-plugins) for details.
+
+## Install for development (local clone)
+
+To hack on the plugin or run without the marketplace flow:
+
+```bash
+git clone https://github.com/CHOSENX-GPU/HCC-Plugin.git
+cd HCC-Plugin
+claude --plugin-dir "$(pwd)"
+```
+
+On Windows (PowerShell), pass the full path to `HCC-Plugin` instead of `$(pwd)`.
 
 ## Quick Start
 
