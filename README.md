@@ -10,8 +10,8 @@ HCC Memory is a Claude Code plugin that gives your AI assistant persistent, stru
 
 1. Clone this repository (plugin root = repo root):
    ```bash
-   git clone https://github.com/<your-username>/<your-repo>.git
-   cd <your-repo>
+   git clone https://github.com/CHOSENX-GPU/HCC-Plugin.git
+   cd HCC-Plugin
    ```
 
 2. Launch Claude Code with the local plugin:
