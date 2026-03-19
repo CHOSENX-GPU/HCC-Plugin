@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.1] - 2026-03-20
+
+- Fix `plugin.json`: `author` must be an object `{ "name": "..." }` per Claude Code manifest validation (not a string).
+
 ## [0.1.0] - 2026-03-20
 
 - Publish lean plugin repo: omit internal `docs/`, spec, and implementation-prompt sources (see `.gitignore`)
