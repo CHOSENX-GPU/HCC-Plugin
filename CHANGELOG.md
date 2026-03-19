@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.2] - 2026-03-20
+
+- Fix `hooks/hooks.json`: plugin format requires a top-level `"hooks": { ... }` wrapper (not bare `PostToolUse` / `SessionStart` keys). Resolves “expected record, received undefined” on `hooks` path.
+
 ## [0.1.1] - 2026-03-20
 
 - Fix `plugin.json`: `author` must be an object `{ "name": "..." }` per Claude Code manifest validation (not a string).
