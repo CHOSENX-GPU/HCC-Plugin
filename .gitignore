@@ -1,6 +1,11 @@
 # Local Claude / Cursor (do not publish)
 .claude/
 
+# Internal / design docs — not part of the distributable plugin
+docs/
+HCC_Cursor_Implementation_Prompts.md
+HCC_Memory_Plugin_Spec_Final.md
+
 # OS
 .DS_Store
 Thumbs.db

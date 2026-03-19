@@ -136,7 +136,7 @@ project/
 
 ## ChatCFD Integration
 
-This plugin is designed for CFD simulation workflows but works with any project type. For ChatCFD-specific documentation and multi-agent architecture details, see the `docs/` directory.
+This plugin is designed for CFD simulation workflows but works with any project type. ChatCFD-specific design notes live in your own internal documentation, not in this published plugin repo.
 
 ## Requirements
 
@@ -147,7 +147,7 @@ This plugin is designed for CFD simulation workflows but works with any project 
 
 ## Contributing
 
-See `docs/` for design philosophy and architecture details. To publish this repo to GitHub, see [docs/RELEASING.md](docs/RELEASING.md).
+Pull requests welcome. Maintainer notes for publishing: [RELEASING.md](RELEASING.md).
 
 ## License
 
