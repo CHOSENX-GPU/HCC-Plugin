@@ -1,0 +1,2 @@
+# Bash scripts must use LF for Linux/macOS CI and WSL
+*.sh text eol=lf

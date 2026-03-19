@@ -1,0 +1,17 @@
+# Local Claude / Cursor (do not publish)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+*.swp
+*~
+.idea/
+.vscode/
+
+# Test / temp
+*.tmp
+*.log

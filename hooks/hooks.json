@@ -1,0 +1,25 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit|Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/action-counter.sh",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session-start.sh",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}

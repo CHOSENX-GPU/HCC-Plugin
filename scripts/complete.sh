@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/util/platform.sh"
+source "$SCRIPT_DIR/util/frontmatter.sh"
+
+PROJECT_DIR="$1"
+shift
+
+# --upgrade mode
+if [[ "${1:-}" == "--upgrade" ]]; then
+  FINDING_ID="$2"
+  FINDING_FILE=$(find "$PROJECT_DIR/memory/findings" -name "${FINDING_ID}.md" 2>/dev/null | head -1)
+
+  if [[ -z "$FINDING_FILE" || ! -f "$FINDING_FILE" ]]; then
+    echo "ERROR: Finding $FINDING_ID not found." >&2
+    exit 1
+  fi
+
+  source "$SCRIPT_DIR/util/fingerprint.sh"
+
+  DOMAIN=$(_fm_get "$FINDING_FILE" "domain")
+  TYPE=$(_fm_get "$FINDING_FILE" "type")
+  TITLE=$(_fm_get "$FINDING_FILE" "title")
+  DOMAIN_CODE=$(_domain_to_code "$DOMAIN")
+
+  W_ID=$(_generate_id "W" "$DOMAIN_CODE" "$TYPE" "$TITLE")
+  W_ID=$(_check_id_collision "$PROJECT_DIR/memory/wisdom" "$W_ID")
+
+  cp "$FINDING_FILE" "$PROJECT_DIR/memory/wisdom/${W_ID}.md"
+  _fm_set "$PROJECT_DIR/memory/wisdom/${W_ID}.md" "id" "$W_ID"
+  _fm_set "$PROJECT_DIR/memory/wisdom/${W_ID}.md" "confidence" "high"
+  _fm_set "$PROJECT_DIR/memory/wisdom/${W_ID}.md" "updated_at" "\"$(_date_short)\""
+
+  # Mark original finding as deprecated
+  _fm_set "$FINDING_FILE" "status" "deprecated"
+
+  # Rebuild both indexes
+  bash "$SCRIPT_DIR/util/index-rebuild.sh" "$PROJECT_DIR/memory/findings"
+  bash "$SCRIPT_DIR/util/index-rebuild.sh" "$PROJECT_DIR/memory/wisdom"
+
+  echo "Upgraded $FINDING_ID -> $W_ID (wisdom)"
+  exit 0
+fi
+
+# Default mode: complete task
+SUMMARY="$*"
+ACTIVE="$PROJECT_DIR/memory/tasks/_active.md"
+TRACE="$PROJECT_DIR/memory/trace.md"
+
+if [[ ! -f "$ACTIVE" ]]; then
+  echo "WARNING: No active task to complete." >&2
+fi
+
+# 1. Archive trace to sessions/
+ARCHIVE_TS=$(date -u +"%Y-%m-%d-%H%M")
+if [[ -f "$TRACE" ]]; then
+  cp "$TRACE" "$PROJECT_DIR/memory/sessions/S-${ARCHIVE_TS}.md"
+fi
+
+# 2. Reinitialize trace.md
+DATE=$(_date_iso)
+cat > "$TRACE" << EOF
+# Execution Trace
+
+> Task: (none)
+> Session started: $DATE
+EOF
+
+# 3. Rename _active.md to T-{date}-{desc}.md
+if [[ -f "$ACTIVE" ]]; then
+  TASK_STATUS=$(_fm_get "$ACTIVE" "status")
+  if [[ "$TASK_STATUS" == "active" ]]; then
+    TASK_NAME=$(_fm_get "$ACTIVE" "task")
+    SHORT_DESC=$(echo "$TASK_NAME" | tr ' ' '-' | tr -cd '[:alnum:]-' | cut -c1-30)
+    DATE_SHORT=$(_date_short)
+    ARCHIVE_TASK="$PROJECT_DIR/memory/tasks/T-${DATE_SHORT}-${SHORT_DESC}.md"
+
+    # Append completion info
+    {
+      echo ""
+      echo "## Completion"
+      echo ""
+      echo "- Completed: $DATE"
+      echo "- Summary: $SUMMARY"
+    } >> "$ACTIVE"
+    _fm_set "$ACTIVE" "status" "completed"
+
+    mv "$ACTIVE" "$ARCHIVE_TASK"
+  fi
+fi
+
+# 4. Create empty _active.md
+cat > "$ACTIVE" << 'EOF'
+---
+task: ""
+started_at: ""
+status: none
+action_count: 0
+---
+
+No active task. Use /hcc-memory:plan to start one.
+EOF
+
+# 5. Scan findings for upgrade candidates
+echo "=== Findings Review ==="
+FINDINGS_DIR="$PROJECT_DIR/memory/findings"
+for f in "$FINDINGS_DIR"/*.md; do
+  [[ "$(basename "$f")" == "_index.md" ]] && continue
+  [[ ! -f "$f" ]] && continue
+
+  f_status=$(_fm_get "$f" "status")
+  [[ "$f_status" != "active" ]] && continue
+
+  f_id=$(_fm_get "$f" "id")
+  f_type=$(_fm_get "$f" "type")
+  f_val=$(_fm_get "$f" "validation_level")
+  f_verified_in=$(_fm_get "$f" "verified_in")
+  # Count items in verified_in array
+  f_vi_count=$(echo "$f_verified_in" | tr ',' '\n' | grep -c '[^[:space:]]' 2>/dev/null || echo "0")
+
+  echo "${f_id}|${f_type}|${f_val}|${f_vi_count}"
+done
+
+# 6. Reset state.json
+_json_set "$PROJECT_DIR/.hcc/state.json" "active_task" "null"
+_json_set "$PROJECT_DIR/.hcc/state.json" "action_count" "0"
+
+# Rebuild indexes
+bash "$SCRIPT_DIR/util/index-rebuild.sh" "$FINDINGS_DIR"
+bash "$SCRIPT_DIR/util/index-rebuild.sh" "$PROJECT_DIR/memory/wisdom"
+
+echo ""
+echo "Task completed: $SUMMARY"
+echo "Trace archived to memory/sessions/S-${ARCHIVE_TS}.md"
