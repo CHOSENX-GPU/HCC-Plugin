@@ -89,6 +89,7 @@ if [[ "$ENTRY_COUNT" -gt "$MAX_ENTRIES" ]]; then
     ' "$TRACE")
 
     # Archive the first block
+    mkdir -p "$PROJECT_DIR/memory/sessions"
     ARCHIVE_TS=$(date -u +"%Y-%m-%d-%H%M")
     ARCHIVE_FILE="$PROJECT_DIR/memory/sessions/S-${ARCHIVE_TS}.md"
     echo "$FIRST_BLOCK" > "$ARCHIVE_FILE"
@@ -115,6 +116,7 @@ while [[ "$CURRENT_SIZE" -gt "$MAX_BYTES" ]]; do
   HEADER=$(awk '/^## \[/{exit} {print}' "$TRACE")
   FIRST_BLOCK=$(awk '/^## \[/ { if (found) exit; found=1 } found { print }' "$TRACE")
 
+  mkdir -p "$PROJECT_DIR/memory/sessions"
   ARCHIVE_TS=$(date -u +"%Y-%m-%d-%H%M%S")
   echo "$FIRST_BLOCK" > "$PROJECT_DIR/memory/sessions/S-${ARCHIVE_TS}.md"
 
