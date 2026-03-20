@@ -6,6 +6,15 @@ source "$SCRIPT_DIR/util/platform.sh"
 
 PROJECT_DIR="$1"
 shift
+
+# Parse optional flags before the brief description
+PHASE=""
+while [[ "${1:-}" == --* ]]; do
+  case "$1" in
+    --phase) PHASE="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
 BRIEF="$*"
 
 TRACE="$PROJECT_DIR/memory/trace.md"
@@ -17,11 +26,13 @@ if [[ ! -f "$TRACE" ]]; then
   exit 1
 fi
 
-# Read and increment action count
+# Read action count; only increment if not called from hook (which already incremented)
 ACTION_COUNT=$(_json_get "$STATE" "action_count")
 ACTION_COUNT=${ACTION_COUNT:-0}
-ACTION_COUNT=$((ACTION_COUNT + 1))
-_json_set "$STATE" "action_count" "$ACTION_COUNT"
+if [[ "${HCC_NO_INCREMENT:-}" != "1" ]]; then
+  ACTION_COUNT=$((ACTION_COUNT + 1))
+  _json_set "$STATE" "action_count" "$ACTION_COUNT"
+fi
 
 # Get current time for the block header
 TIME_HM=$(date -u +"%H:%M")
@@ -32,10 +43,24 @@ if [[ ! -t 0 ]]; then
   DETAIL=$(cat)
 fi
 
-# Append Action block to trace.md
+# Build header line based on phase
+case "$PHASE" in
+  plan)        HEADER="## [$TIME_HM] 🧠 PLAN -- ${BRIEF}" ;;
+  exec)        HEADER="## [$TIME_HM] 🔧 EXEC -- ${BRIEF}" ;;
+  check)       HEADER="## [$TIME_HM] ✅ CHECK -- ${BRIEF}" ;;
+  done)        HEADER="## [$TIME_HM] 📋 DONE -- ${BRIEF}" ;;
+  error)       HEADER="## [$TIME_HM] ❌ ERROR -- ${BRIEF}" ;;
+  checkpoint)  HEADER="## [$TIME_HM] ⏱ CHECKPOINT -- ${BRIEF}" ;;
+  turn)        HEADER="## [$TIME_HM] ⏸ TURN -- ${BRIEF}" ;;
+  session_end) HEADER="## [$TIME_HM] 🔚 SESSION END -- ${BRIEF}" ;;
+  "")          HEADER="## [$TIME_HM] Action-${ACTION_COUNT} -- ${BRIEF}" ;;
+  *)           HEADER="## [$TIME_HM] ${PHASE} -- ${BRIEF}" ;;
+esac
+
+# Append block to trace.md
 {
   echo ""
-  echo "## [$TIME_HM] Action-${ACTION_COUNT} -- ${BRIEF}"
+  echo "$HEADER"
   if [[ -n "$DETAIL" ]]; then
     echo ""
     echo "$DETAIL"

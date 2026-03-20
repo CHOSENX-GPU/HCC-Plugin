@@ -128,4 +128,77 @@ test_log_trace_rolling_window() {
   rm -rf "$tmpdir"
 }
 
-run_tests test_plan_creates_task test_plan_reinitializes_trace test_plan_resets_state test_plan_blocks_if_active test_log_trace_appends_block test_log_trace_increments_action_count test_log_trace_rolling_window
+test_log_trace_phase_plan() {
+  local tmpdir
+  tmpdir=$(setup_project)
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task"
+
+  bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" --phase plan "Setting up cavity" </dev/null
+
+  assert_file_contains "$tmpdir/memory/trace.md" "PLAN" "trace has PLAN phase"
+  assert_file_contains "$tmpdir/memory/trace.md" "Setting up cavity" "trace has phase brief"
+
+  rm -rf "$tmpdir"
+}
+
+test_log_trace_phase_checkpoint() {
+  local tmpdir
+  tmpdir=$(setup_project)
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task"
+
+  bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" --phase checkpoint "Actions 1-5" </dev/null
+
+  assert_file_contains "$tmpdir/memory/trace.md" "CHECKPOINT" "trace has CHECKPOINT phase"
+  assert_file_contains "$tmpdir/memory/trace.md" "Actions 1-5" "trace has checkpoint range"
+
+  rm -rf "$tmpdir"
+}
+
+test_log_trace_no_increment_env() {
+  local tmpdir
+  tmpdir=$(setup_project)
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task"
+
+  # Normal call increments
+  bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" "Normal entry" </dev/null
+  local count1
+  count1=$(_json_get "$tmpdir/.hcc/state.json" "action_count")
+
+  # HCC_NO_INCREMENT=1 should not increment
+  HCC_NO_INCREMENT=1 bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" --phase checkpoint "Auto checkpoint" </dev/null
+  local count2
+  count2=$(_json_get "$tmpdir/.hcc/state.json" "action_count")
+
+  assert_equals "$count1" "$count2" "HCC_NO_INCREMENT=1 should not change action_count"
+
+  rm -rf "$tmpdir"
+}
+
+test_log_trace_backward_compat() {
+  local tmpdir
+  tmpdir=$(setup_project)
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task"
+
+  bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" "Old style entry" </dev/null
+
+  assert_file_contains "$tmpdir/memory/trace.md" "Action-1" "backward compat: Action-N format"
+  assert_file_contains "$tmpdir/memory/trace.md" "Old style entry" "backward compat: brief text"
+
+  rm -rf "$tmpdir"
+}
+
+test_log_trace_phase_with_stdin_detail() {
+  local tmpdir
+  tmpdir=$(setup_project)
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task"
+
+  echo "- Write: blockMeshDict
+- Bash: blockMesh" | bash "$PLUGIN_ROOT/scripts/log-trace.sh" "$tmpdir" --phase checkpoint "Actions 1-2"
+
+  assert_file_contains "$tmpdir/memory/trace.md" "CHECKPOINT" "has checkpoint header"
+  assert_file_contains "$tmpdir/memory/trace.md" "Write: blockMeshDict" "has tool detail from stdin"
+
+  rm -rf "$tmpdir"
+}
+
+run_tests test_plan_creates_task test_plan_reinitializes_trace test_plan_resets_state test_plan_blocks_if_active test_log_trace_appends_block test_log_trace_increments_action_count test_log_trace_rolling_window test_log_trace_phase_plan test_log_trace_phase_checkpoint test_log_trace_no_increment_env test_log_trace_backward_compat test_log_trace_phase_with_stdin_detail

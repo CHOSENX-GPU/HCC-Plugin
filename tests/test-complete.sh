@@ -93,4 +93,29 @@ test_complete_upgrade() {
   rm -rf "$tmpdir"
 }
 
-run_tests test_complete_archives_trace test_complete_renames_active test_complete_resets_state test_complete_upgrade
+test_complete_empty_trace_fallback() {
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  bash "$PLUGIN_ROOT/scripts/init-memory.sh" "$tmpdir" "openfoam" "" > /dev/null
+  bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task" > /dev/null
+
+  # Simulate actions without any trace entries (the bug scenario)
+  _json_set "$tmpdir/.hcc/state.json" "action_count" "15"
+
+  local output
+  output=$(bash "$PLUGIN_ROOT/scripts/complete.sh" "$tmpdir" "Task done with empty trace" 2>&1)
+
+  # Should warn about empty trace
+  assert_match "WARNING" "$output" "Should warn about empty trace"
+
+  # Archived session should contain Recovery entry
+  local session_file
+  session_file=$(find "$tmpdir/memory/sessions" -name "S-*.md" 2>/dev/null | head -1)
+  assert_true "[ -n '$session_file' ]" "Session file should exist"
+  assert_file_contains "$session_file" "Recovery" "Should have Recovery entry"
+  assert_file_contains "$session_file" "15 actions" "Should mention action count"
+
+  rm -rf "$tmpdir"
+}
+
+run_tests test_complete_archives_trace test_complete_renames_active test_complete_resets_state test_complete_upgrade test_complete_empty_trace_fallback

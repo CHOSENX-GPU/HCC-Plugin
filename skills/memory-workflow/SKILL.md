@@ -9,14 +9,56 @@ description: "Manages project-level memory using HCC. Activates when: project ha
 
 You are working in a project with the HCC memory system (memory/ directory exists).
 
-## 5-Action Rule (MANDATORY)
-After every 5 tool uses, update the trace:
+## 5-Action Rule (Auto-Trace)
 
-```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/log-trace.sh" "$(pwd)" "<brief summary>"
+The action-counter hook automatically logs a checkpoint trace entry every 5 tool uses.
+These auto-checkpoints capture which tools were used (file paths, commands) so the trace
+is never empty, even in high-density autonomous workflows.
+
+## Responding to 5-Action Rule Reminders
+
+When you see:
+```
+📝 [HCC] Auto-logged trace (actions X-Y). Add detail: /hcc-memory:log
 ```
 
-This is not optional. Forgetting causes permanent context loss.
+You SHOULD (but are not blocked if you don't):
+1. Briefly note what you accomplished in actions X-Y
+2. Run: `/hcc-memory:log "<your 1-sentence summary>"`
+
+The auto-entry ensures trace is never empty. Your manual entry adds meaningful context.
+If you're in a high-density workflow, it's OK to skip manual logging -- the auto-entries
+provide a baseline timeline.
+
+## Phase Protocol (Enriching Auto-Trace)
+
+Auto-checkpoints record WHAT tools you used. Phase entries record WHY and WHAT YOU LEARNED.
+Both are needed for useful promote material.
+
+### PLAN (before starting a subtask)
+```bash
+/hcc-memory:log --phase plan "Intent: ..., Approach: ..., Risk: ..."
+```
+
+### EXEC (after a block of work) -- optional, auto-checkpoints cover basics
+```bash
+/hcc-memory:log --phase exec "Modified: ..., Ran: ..., Result: ..."
+```
+
+### CHECK (after simulation/test/validation)
+```bash
+/hcc-memory:log --phase check "Convergence: ..., Physical: ..., Quantitative: ..."
+```
+
+### DONE (subtask/task complete)
+```bash
+/hcc-memory:log --phase done "Outcome: ..., Learned: ..., Promote candidate: ..."
+```
+
+### ERROR (error encountered)
+```bash
+/hcc-memory:log --phase error "Error: ..., Memory search: ..., Fix: ..., Root cause: ..."
+```
 
 ## When You Encounter an Error
 BEFORE trying to fix it yourself:
