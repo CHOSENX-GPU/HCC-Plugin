@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1] - 2026-03-20
+
+### Bug Fixes
+- **Race condition fix**: Replace non-atomic read-modify-write on `state.json` with append-only `.hcc/action_ticks` file — `echo >> file` is atomic on POSIX, so concurrent hooks never lose increments
+- **Checkpoint lock**: Use `mkdir`-based portable lock to prevent double-fire when parallel hooks hit the checkpoint boundary simultaneously
+- **Stale buffer leak**: `plan.sh` and `complete.sh` now clear all temp files (`action_ticks`, `tool_activity.tmp`, `last_checkpoint.tmp`, `last_turn_count.tmp`) to prevent previous task data bleeding into the next task's first checkpoint
+- **Self-counting fix**: `plan.sh` creates a `.hcc/skip_next_count` flag so its own PostToolUse hook invocation is not counted as an action
+- `stop-hook.sh` and `session-end-hook.sh` now read count from `action_ticks` (source of truth) instead of `state.json`
+- New test: `test_action_counter_parallel_safety` verifies 5 concurrent appends produce count=5
+- New test: `test_action_counter_skip_flag` verifies skip flag consumption
+
 ## [0.2.0] - 2026-03-20
 
 ### Critical Bug Fix

@@ -62,7 +62,12 @@ if [[ -f "$TRACE" ]]; then
   ENTRY_COUNT=$(echo "$ENTRY_COUNT" | tr -d '[:space:]')
   if [[ "$ENTRY_COUNT" -eq 0 ]]; then
     echo "WARNING: Trace is empty (no action entries logged during this task)." >&2
-    FINAL_ACTION_COUNT=$(_json_get "$PROJECT_DIR/.hcc/state.json" "action_count")
+    TICKS_FILE="$PROJECT_DIR/.hcc/action_ticks"
+    if [[ -f "$TICKS_FILE" ]]; then
+      FINAL_ACTION_COUNT=$(wc -l < "$TICKS_FILE" | tr -d ' ')
+    else
+      FINAL_ACTION_COUNT=$(_json_get "$PROJECT_DIR/.hcc/state.json" "action_count")
+    fi
     FINAL_ACTION_COUNT=${FINAL_ACTION_COUNT:-0}
     if [[ "$FINAL_ACTION_COUNT" -gt 0 ]]; then
       {
@@ -141,9 +146,14 @@ for f in "$FINDINGS_DIR"/*.md; do
   echo "${f_id}|${f_type}|${f_val}|${f_vi_count}"
 done
 
-# 6. Reset state.json
+# 6. Reset state.json and temp files
 _json_set "$PROJECT_DIR/.hcc/state.json" "active_task" "null"
 _json_set "$PROJECT_DIR/.hcc/state.json" "action_count" "0"
+> "$PROJECT_DIR/.hcc/action_ticks"
+> "$PROJECT_DIR/.hcc/tool_activity.tmp"
+> "$PROJECT_DIR/.hcc/last_checkpoint.tmp"
+> "$PROJECT_DIR/.hcc/last_turn_count.tmp"
+rmdir "$PROJECT_DIR/.hcc/checkpoint.lock" 2>/dev/null || true
 
 # Rebuild indexes
 bash "$SCRIPT_DIR/util/index-rebuild.sh" "$FINDINGS_DIR"

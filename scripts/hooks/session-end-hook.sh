@@ -8,25 +8,28 @@ PROJECT_DIR="$(_project_root "$(pwd)")" || exit 0
 [[ ! -d "$PROJECT_DIR/memory" ]] && exit 0
 [[ ! -f "$PROJECT_DIR/memory/trace.md" ]] && exit 0
 
-STATE="$PROJECT_DIR/.hcc/state.json"
-[[ ! -f "$STATE" ]] && exit 0
+TICKS="$PROJECT_DIR/.hcc/action_ticks"
 
-COUNT=$(_json_get "$STATE" "action_count")
-COUNT=${COUNT:-0}
+# Read count from the atomic ticks file (source of truth)
+if [[ -f "$TICKS" ]]; then
+  COUNT=$(wc -l < "$TICKS" | tr -d ' ')
+else
+  COUNT=0
+fi
 [[ "$COUNT" -eq 0 ]] && exit 0
 
-# Flush any remaining tool activity as a final checkpoint
-ACTIVITY_FILE="$PROJECT_DIR/.hcc/tool_activity.tmp"
-if [[ -f "$ACTIVITY_FILE" ]] && [[ -s "$ACTIVITY_FILE" ]]; then
-  INTERVAL=$(grep "flush_interval:" "$PROJECT_DIR/.hcc/config.yaml" 2>/dev/null | awk '{print $2}')
-  INTERVAL=${INTERVAL:-5}
-  LAST_CHECKPOINT=$(( (COUNT / INTERVAL) * INTERVAL ))
-  RANGE_START=$((LAST_CHECKPOINT + 1))
-  if [[ "$RANGE_START" -le "$COUNT" ]]; then
-    ACTIVITY=$(cat "$ACTIVITY_FILE" 2>/dev/null || true)
+# Flush any remaining tool activity since the last checkpoint
+LAST_CP_FILE="$PROJECT_DIR/.hcc/last_checkpoint.tmp"
+LAST_CP=$(cat "$LAST_CP_FILE" 2>/dev/null || echo "0")
+LAST_CP=$(echo "$LAST_CP" | tr -d '[:space:]')
+LAST_CP=${LAST_CP:-0}
+
+if [[ "$COUNT" -gt "$LAST_CP" && -f "$TICKS" ]]; then
+  RANGE_START=$((LAST_CP + 1))
+  ACTIVITY=$(tail -n "+${RANGE_START}" "$TICKS" | head -n "$((COUNT - LAST_CP))")
+  if [[ -n "$ACTIVITY" ]]; then
     echo "$ACTIVITY" | HCC_NO_INCREMENT=1 bash "$SCRIPT_DIR/log-trace.sh" \
       "$PROJECT_DIR" --phase checkpoint "Actions ${RANGE_START}-${COUNT}"
-    > "$ACTIVITY_FILE"
   fi
 fi
 

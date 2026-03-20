@@ -99,8 +99,9 @@ test_complete_empty_trace_fallback() {
   bash "$PLUGIN_ROOT/scripts/init-memory.sh" "$tmpdir" "openfoam" "" > /dev/null
   bash "$PLUGIN_ROOT/scripts/plan.sh" "$tmpdir" "Test task" > /dev/null
 
-  # Simulate actions without any trace entries (the bug scenario)
-  _json_set "$tmpdir/.hcc/state.json" "action_count" "15"
+  # Simulate actions without any trace entries (the bug scenario):
+  # write 15 lines to action_ticks as the source of truth
+  for i in $(seq 1 15); do echo "- tick $i" >> "$tmpdir/.hcc/action_ticks"; done
 
   local output
   output=$(bash "$PLUGIN_ROOT/scripts/complete.sh" "$tmpdir" "Task done with empty trace" 2>&1)

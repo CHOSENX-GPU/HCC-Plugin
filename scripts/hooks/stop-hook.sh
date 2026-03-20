@@ -21,11 +21,14 @@ PROJECT_DIR="$(_project_root "$(pwd)")" || exit 0
 [[ ! -d "$PROJECT_DIR/memory" ]] && exit 0
 [[ ! -f "$PROJECT_DIR/memory/trace.md" ]] && exit 0
 
-STATE="$PROJECT_DIR/.hcc/state.json"
-[[ ! -f "$STATE" ]] && exit 0
+TICKS="$PROJECT_DIR/.hcc/action_ticks"
 
-COUNT=$(_json_get "$STATE" "action_count")
-COUNT=${COUNT:-0}
+# Read count from the atomic ticks file (source of truth)
+if [[ -f "$TICKS" ]]; then
+  COUNT=$(wc -l < "$TICKS" | tr -d ' ')
+else
+  COUNT=0
+fi
 
 # Avoid duplicate turn markers for idle turns
 LAST_TURN_FILE="$PROJECT_DIR/.hcc/last_turn_count.tmp"

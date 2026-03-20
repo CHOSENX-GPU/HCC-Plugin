@@ -20,9 +20,18 @@ PROJECT_DIR="$(_project_root "$CWD")" || exit 0
 
 STATE="$PROJECT_DIR/.hcc/state.json"
 CONFIG="$PROJECT_DIR/.hcc/config.yaml"
+TICKS="$PROJECT_DIR/.hcc/action_ticks"
 
 [[ ! -d "$PROJECT_DIR/memory" ]] && exit 0
 [[ ! -f "$STATE" ]] && exit 0
+
+# Bug 3 fix: if plan.sh just ran, skip this invocation so the plan
+# command itself is not counted as an action.
+SKIP_FLAG="$PROJECT_DIR/.hcc/skip_next_count"
+if [[ -f "$SKIP_FLAG" ]]; then
+  rm -f "$SKIP_FLAG"
+  exit 0
+fi
 
 # Extract tool info from stdin JSON for meaningful checkpoint content
 TOOL_BRIEF=""
@@ -44,31 +53,55 @@ elif [[ -n "$INPUT" ]]; then
   TOOL_BRIEF="- ${TOOL_NAME:-tool}"
 fi
 
-# Append tool activity to temp file for checkpoint aggregation
-if [[ -n "$TOOL_BRIEF" ]]; then
-  echo "$TOOL_BRIEF" >> "$PROJECT_DIR/.hcc/tool_activity.tmp"
-fi
+# Bug 1 fix: atomic append instead of read-modify-write.
+# echo >> file is atomic for short writes on POSIX, so concurrent hooks
+# each append exactly one line and no increment is ever lost.
+echo "${TOOL_BRIEF:-+}" >> "$TICKS"
 
-# Read and increment counter
-COUNT=$(_json_get "$STATE" "action_count")
-COUNT=${COUNT:-0}
-COUNT=$((COUNT + 1))
-_json_set "$STATE" "action_count" "$COUNT"
+# Count = number of lines (always accurate regardless of concurrency)
+COUNT=$(wc -l < "$TICKS" | tr -d ' ')
+
+# Best-effort sync to state.json for display consumers (non-critical race is OK)
+_json_set "$STATE" "action_count" "$COUNT" 2>/dev/null || true
 
 # Read flush interval from config
 INTERVAL=$(grep "flush_interval:" "$CONFIG" 2>/dev/null | awk '{print $2}')
 INTERVAL=${INTERVAL:-5}
 
-# Auto-write checkpoint at interval
-if [[ "$COUNT" -gt 0 && $((COUNT % INTERVAL)) -eq 0 ]]; then
-  RANGE_START=$((COUNT - INTERVAL + 1))
+# Checkpoint decision: use (COUNT - LAST_CP) >= INTERVAL so that even if
+# a modulo boundary is skipped due to concurrency, the next process catches it.
+LAST_CP_FILE="$PROJECT_DIR/.hcc/last_checkpoint.tmp"
+LAST_CP=$(cat "$LAST_CP_FILE" 2>/dev/null || echo "0")
+LAST_CP=$(echo "$LAST_CP" | tr -d '[:space:]')
+LAST_CP=${LAST_CP:-0}
 
-  if [[ -f "$PROJECT_DIR/memory/trace.md" ]]; then
-    ACTIVITY=$(cat "$PROJECT_DIR/.hcc/tool_activity.tmp" 2>/dev/null || true)
-    echo "$ACTIVITY" | HCC_NO_INCREMENT=1 bash "$SCRIPT_DIR/log-trace.sh" \
-      "$PROJECT_DIR" --phase checkpoint "Actions ${RANGE_START}-${COUNT}"
-    > "$PROJECT_DIR/.hcc/tool_activity.tmp"
+if [[ $((COUNT - LAST_CP)) -ge $INTERVAL && -f "$PROJECT_DIR/memory/trace.md" ]]; then
+  # Acquire portable lock (mkdir is atomic on all POSIX systems)
+  LOCK="$PROJECT_DIR/.hcc/checkpoint.lock"
+  if mkdir "$LOCK" 2>/dev/null; then
+    trap 'rmdir "'"$LOCK"'" 2>/dev/null || true' EXIT
+
+    # Re-verify inside lock (another process may have written the checkpoint)
+    COUNT=$(wc -l < "$TICKS" | tr -d ' ')
+    LAST_CP=$(cat "$LAST_CP_FILE" 2>/dev/null || echo "0")
+    LAST_CP=$(echo "$LAST_CP" | tr -d '[:space:]')
+    LAST_CP=${LAST_CP:-0}
+
+    if [[ $((COUNT - LAST_CP)) -ge $INTERVAL ]]; then
+      RANGE_START=$((LAST_CP + 1))
+
+      # Extract activity for this checkpoint range from the ticks file
+      ACTIVITY=$(tail -n "+${RANGE_START}" "$TICKS" | head -n "$((COUNT - LAST_CP))")
+
+      echo "$ACTIVITY" | HCC_NO_INCREMENT=1 bash "$SCRIPT_DIR/log-trace.sh" \
+        "$PROJECT_DIR" --phase checkpoint "Actions ${RANGE_START}-${COUNT}"
+
+      echo "$COUNT" > "$LAST_CP_FILE"
+      _json_set "$STATE" "action_count" "$COUNT" 2>/dev/null || true
+    fi
+
+    rmdir "$LOCK" 2>/dev/null || true
+    trap - EXIT
   fi
-
-  echo "📝 [HCC] Auto-logged trace (actions ${RANGE_START}-${COUNT}). Add detail: /hcc-memory:log"
+  # If mkdir failed, another process is handling the checkpoint -- skip
 fi

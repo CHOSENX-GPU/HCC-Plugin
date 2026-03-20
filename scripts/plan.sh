@@ -94,5 +94,15 @@ fi
 _json_set "$PROJECT_DIR/.hcc/state.json" "action_count" "0"
 _json_set "$PROJECT_DIR/.hcc/state.json" "active_task" "\"$TASK_DESC\""
 
+# Clear all temp files to prevent stale data leaking across tasks
+> "$PROJECT_DIR/.hcc/action_ticks"
+> "$PROJECT_DIR/.hcc/tool_activity.tmp"
+> "$PROJECT_DIR/.hcc/last_checkpoint.tmp"
+> "$PROJECT_DIR/.hcc/last_turn_count.tmp"
+rmdir "$PROJECT_DIR/.hcc/checkpoint.lock" 2>/dev/null || true
+
+# Skip flag: prevent plan.sh's own PostToolUse hook from being counted
+touch "$PROJECT_DIR/.hcc/skip_next_count"
+
 echo "Task started: $TASK_DESC"
 echo "Action counter reset. 5-Action Rule active."
