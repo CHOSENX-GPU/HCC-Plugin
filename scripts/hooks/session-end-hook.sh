@@ -36,3 +36,9 @@ fi
 # Write session-end summary
 HCC_NO_INCREMENT=1 bash "$SCRIPT_DIR/log-trace.sh" "$PROJECT_DIR" \
   --phase session_end "Total actions: ${COUNT}"
+
+# Safety net: auto-archive trace so data is never lost even if
+# /hcc-memory:complete was never run during the session.
+ARCHIVE_TS=$(date -u +"%Y-%m-%d-%H%M")
+mkdir -p "$PROJECT_DIR/memory/sessions"
+cp "$PROJECT_DIR/memory/trace.md" "$PROJECT_DIR/memory/sessions/S-${ARCHIVE_TS}-auto.md"

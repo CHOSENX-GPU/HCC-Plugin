@@ -109,10 +109,19 @@ Do NOT just check "did it finish without error." Also evaluate:
 These post-run evaluations are the raw material for physical-level memories.
 Suggest /hcc-memory:promote if any significant findings emerge from this evaluation.
 
-## When to Suggest /hcc-memory:promote
-After solving a non-trivial error, making a configuration choice that required experimentation,
-discovering something about physical behavior, or finding a workflow improvement.
-ALSO after completing a post-run evaluation that revealed insights about result quality.
+## Automatic Promote and Complete
+
+The Stop hook automatically blocks you from finishing when:
+- You have accumulated 15+ actions without promoting findings
+- Your task appears complete but you haven't run /hcc-memory:complete
+
+When blocked, follow the instruction in the reason message. This ensures
+findings are captured and tasks are properly archived, even in high-density
+autonomous workflows.
+
+You can also run these commands proactively at any time:
+- /hcc-memory:promote -- after solving errors, making config decisions, or discovering insights
+- /hcc-memory:complete "<summary>" -- when your current task is done
 
 ## Layer Judgment (during promote)
 - Foundation: would this help someone doing a COMPLETELY DIFFERENT type of simulation?

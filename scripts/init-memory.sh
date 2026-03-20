@@ -84,6 +84,7 @@ project:
 
 memory:
   flush_interval: 5
+  promote_threshold: 15
   trace_max_entries: 30
   trace_max_bytes: 12288
   stale_threshold_days: 180

@@ -11,7 +11,7 @@
       "name": "hcc-memory",
       "source": "./",
       "description": "Hierarchical Cognitive Caching — project-level memory system for Claude Code. Tracks work, distills experience, builds verified knowledge across sessions.",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "author": {
         "name": "Wei"
       },

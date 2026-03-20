@@ -153,6 +153,8 @@ _json_set "$PROJECT_DIR/.hcc/state.json" "action_count" "0"
 > "$PROJECT_DIR/.hcc/tool_activity.tmp"
 > "$PROJECT_DIR/.hcc/last_checkpoint.tmp"
 > "$PROJECT_DIR/.hcc/last_turn_count.tmp"
+> "$PROJECT_DIR/.hcc/last_promote_count.tmp"
+rm -f "$PROJECT_DIR/.hcc/complete_requested.tmp"
 rmdir "$PROJECT_DIR/.hcc/checkpoint.lock" 2>/dev/null || true
 
 # Rebuild indexes

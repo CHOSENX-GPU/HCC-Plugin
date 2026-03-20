@@ -162,16 +162,19 @@ test_stop_hook_writes_turn_marker() {
 test_stop_hook_respects_stop_hook_active() {
   local tmpdir
   tmpdir=$(setup_project)
-  for i in $(seq 1 5); do echo "- tick $i" >> "$tmpdir/.hcc/action_ticks"; done
+  # Simulate enough actions to trigger promote gate (20 > threshold 15)
+  for i in $(seq 1 20); do echo "- tick $i" >> "$tmpdir/.hcc/action_ticks"; done
 
   cd "$tmpdir"
-  echo '{"stop_hook_active": true}' | bash "$PLUGIN_ROOT/scripts/hooks/stop-hook.sh"
+  local output
+  output=$(echo '{"stop_hook_active": true, "last_assistant_message": "done"}' \
+    | bash "$PLUGIN_ROOT/scripts/hooks/stop-hook.sh" 2>/dev/null)
 
-  local turn_count
-  turn_count=$(grep -c "TURN" "$tmpdir/memory/trace.md" 2>/dev/null || true)
-  turn_count=${turn_count:-0}
-  turn_count=$(echo "$turn_count" | tr -d '[:space:]')
-  assert_equals "0" "$turn_count" "Should not write TURN when stop_hook_active is true"
+  # TURN marker is still written (always), but NO block decision should be output
+  assert_equals "" "$output" "Should not output block decision when stop_hook_active is true"
+
+  # TURN marker should still be written to trace
+  assert_file_contains "$tmpdir/memory/trace.md" "TURN" "TURN marker should still be written"
 
   rm -rf "$tmpdir"
 }

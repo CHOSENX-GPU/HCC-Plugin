@@ -19,7 +19,7 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/stop-hook.sh",
-            "timeout": 5
+            "timeout": 10
           }
         ]
       }

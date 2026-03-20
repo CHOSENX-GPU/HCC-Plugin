@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0] - 2026-03-20
+
+### New Feature: Auto-trigger Promote and Complete
+- **Stop hook gate**: Uses Claude Code's `decision: "block"` mechanism to force Claude to run `/hcc-memory:promote` when action count exceeds threshold (default 15), and `/hcc-memory:complete` when completion language is detected in Claude's response
+- **Completion detection**: Regex-based detection of completion language (English + Chinese) in `last_assistant_message` from Stop hook input
+- **SessionEnd auto-archive**: Copies `trace.md` to `sessions/` as safety net when session ends without explicit `/hcc-memory:complete`
+- **Configurable threshold**: `promote_threshold` in `config.yaml` (default 15) controls how many actions between automatic promote triggers
+- **Tracking files**: `last_promote_count.tmp` and `complete_requested.tmp` prevent re-triggering; cleared by `plan.sh` and `complete.sh`
+- Updated SKILL.md to document automatic promote/complete behavior
+- Stop hook timeout increased to 10s for JSON parsing + gate logic
+
 ## [0.2.1] - 2026-03-20
 
 ### Bug Fixes
